@@ -39,7 +39,7 @@ fs_rcp85 <- c('tas_AFR-22_MOHC-HadGEM2-ES_rcp85_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_
 
 
 path <- '../data/bbox/'
-pathAj <- '../data/ajust/'
+pathAj <- '../data/adjust/'
 varname <- 'tasAdjust'
 
 f_obs <- paste(path, fs_obs[1],  sep="")
@@ -47,7 +47,6 @@ f_ref <- paste(path, fs_hist[1],  sep="")
 f_mod <- paste(path, fs_hist[1],  sep="")
 f_modAj <- paste(pathAj, str_replace(fs_hist[1], 'tas_', 'tasAdjust_'),  sep="")
 
-file.create( f_modAj)
 
 
 
@@ -91,10 +90,15 @@ lines(seq(length(ts_modadj)), ts_modadj, col="blue", lwd=1)
 
 dimState <- ncdim_def( "StateNo", "count", 1:50 )
 
-var_tasAj = ncvar_def( 'tas', 'K', dimState , missval=Fillvalue$value, 
-                       longname='temperature Adjusted', prec="float", 
-                     shuffle=FALSE, compression=NA, chunksizes=NA, verbose=FALSE )
+
+var_tasAj <- ncvar_def( 'tas', nc_mod$var$tas$units , nc_mod$var$tas$dim , nc_mod$var$tas$missval, longname = nc_mod$var$tas$longname, prec="float", 
+           shuffle=FALSE, compression=NA, chunksizes=NA, verbose=FALSE )
+
 
 # Error, second arg must either be a ncvar object (created by a call to ncvar_def()) or a list of ncvar objects
 
-nc_modAJ <- nc_create(f_modAj, tas_mod)
+nc_modAJ <- nc_create(f_modAj, var_tasAj)
+
+ncvar_put( nc_modAJ , var_tasAj, tas_modAj, start=NA, count=NA, verbose=FALSE )
+
+nc_close(nc_modAJ)
