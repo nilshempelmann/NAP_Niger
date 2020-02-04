@@ -9,14 +9,14 @@ library(stringr)
 ######################################
 # function for bias adjustment 
 bias_adjust <- function(obs_val, ref_val, model_val){
-  tas_hist_adjust <- array(numeric(),c(dim(model_val)))
+  model_adjust <- array(numeric(),c(dim(model_val)))
   for (r in 1:nrow(tas_obs))   
   { for (c in 1:ncol(tas_obs))
     { val_aj <- CDFt(obs_val[r,c,], ref_val[r,c,], model_val[r,c,], npas=100, dev=2)
-      tas_hist_adjust[r,c,] <- c(val_aj$DS)
+    model_adjust[r,c,] <- c(val_aj$DS)
     }
   }
-return(tas_hist_adjust)}
+return(model_adjust)}
 
 ######################################
 # get the values (observation, historical run and corresponding RCP.)
@@ -48,9 +48,6 @@ f_mod <- paste(path, fs_hist[1],  sep="")
 f_modAj <- paste(pathAj, str_replace(fs_hist[1], 'tas_', 'tasAdjust_'),  sep="")
 
 
-
-
-
 # open files and read in the data 
 
 # open the netCDF files
@@ -67,16 +64,18 @@ tas_mod <- ncvar_get(nc_mod,'tas')
 # dlname <- ncatt_get(ncin,dname,"long_name")
 # dunits <- ncatt_get(ncin,dname,"units")
 
-Fillvalue <- ncatt_get(nc_mod, 'tas',"_FillValue")
+# Fillvalue <- ncatt_get(nc_mod, 'tas',"_FillValue")
 # dim(tmp_array)
+
+
+
+# make the bias Adjustment 
+
+tas_modAj <- bias_adjust(tas_obs, tas_ref, tas_mod)
 
 # make a quick plot to check
 image(tas_obs[,,1], col=rev(brewer.pal(11,"RdBu")))
-
-
-plot.default(tas_hist_adjust[1,1,])
-
-tas_modAj <- bias_adjust(tas_obs, tas_ref, tas_mod)
+plot.default(tas_modAj[1,1,])
 
 image(tas_mod[,,1] - tas_modAj[,,1],  col=rev(brewer.pal(11,"RdBu")))
 
@@ -88,17 +87,16 @@ plot(seq(length(ts_obs)), ts_obs,type="l")
 lines(seq(length(ts_ref)), ts_ref, col="red", lwd=1)
 lines(seq(length(ts_modadj)), ts_modadj, col="blue", lwd=1)
 
-dimState <- ncdim_def( "StateNo", "count", 1:50 )
+# create Adjust output file and store the values there 
 
+copy_message <- file.copy(f_mod, f_modAj )
+print(copy_message)
+
+nc_modAj <- nc_open(f_modAj, write=TRUE)
 
 var_tasAj <- ncvar_def( 'tas', nc_mod$var$tas$units , nc_mod$var$tas$dim , nc_mod$var$tas$missval, longname = nc_mod$var$tas$longname, prec="float", 
            shuffle=FALSE, compression=NA, chunksizes=NA, verbose=FALSE )
 
+ncvar_put( nc_modAj , var_tasAj, tas_modAj, start=NA, count=NA, verbose=FALSE )
 
-# Error, second arg must either be a ncvar object (created by a call to ncvar_def()) or a list of ncvar objects
-
-nc_modAJ <- nc_create(f_modAj, var_tasAj)
-
-ncvar_put( nc_modAJ , var_tasAj, tas_modAj, start=NA, count=NA, verbose=FALSE )
-
-nc_close(nc_modAJ)
+nc_close(nc_modAj)
