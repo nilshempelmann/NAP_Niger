@@ -44,8 +44,9 @@ varname <- 'tasAdjust'
 
 f_obs <- paste(path, fs_obs[1],  sep="")
 f_ref <- paste(path, fs_hist[1],  sep="")
-f_mod <- paste(path, fs_hist[1],  sep="")
-f_modAj <- paste(pathAj, str_replace(fs_hist[1], 'tas_', 'tasAdjust_'),  sep="")
+
+f_mod <- paste(path, fs_rcp85[1],  sep="")
+f_modAj <- paste(pathAj, str_replace(fs_rcp85[1], 'tas_', 'tasAdjust_'),  sep="")
 
 
 # open files and read in the data 
@@ -61,14 +62,6 @@ tas_obs <- ncvar_get(nc_obs,'tas')
 tas_ref <- ncvar_get(nc_ref,'tas')
 tas_mod <- ncvar_get(nc_mod,'tas')
 
-# dlname <- ncatt_get(ncin,dname,"long_name")
-# dunits <- ncatt_get(ncin,dname,"units")
-
-# Fillvalue <- ncatt_get(nc_mod, 'tas',"_FillValue")
-# dim(tmp_array)
-
-
-
 # make the bias Adjustment 
 
 tas_modAj <- bias_adjust(tas_obs, tas_ref, tas_mod)
@@ -76,13 +69,11 @@ tas_modAj <- bias_adjust(tas_obs, tas_ref, tas_mod)
 # make a quick plot to check
 image(tas_obs[,,1], col=rev(brewer.pal(11,"RdBu")))
 plot.default(tas_modAj[1,1,])
-
 image(tas_mod[,,1] - tas_modAj[,,1],  col=rev(brewer.pal(11,"RdBu")))
 
 ts_obs <- apply(tas_obs, 3, mean)
 ts_ref <- apply(tas_ref, 3, mean)
 ts_modadj <- apply(tas_modAj, 3, mean)
-
 plot(seq(length(ts_obs)), ts_obs,type="l")
 lines(seq(length(ts_ref)), ts_ref, col="red", lwd=1)
 lines(seq(length(ts_modadj)), ts_modadj, col="blue", lwd=1)
