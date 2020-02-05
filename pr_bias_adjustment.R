@@ -3,7 +3,9 @@
 
 library(RColorBrewer)
 library(CDFt)
-library(ncdf4)
+library(climate4R.value)
+library(downscaleR)library(ncdf4)
+
 library(stringr)
 
 ######################################
@@ -19,24 +21,7 @@ bias_adjust <- function(obs_val, ref_val, model_val){
 return(model_adjust)}
 
 ######################################
-# get the values (observation, historical run and corresponding RCP.)
-
-
-# fs_obs <- c('tas_AFR-22_ECMWF-ERAINT_evaluation_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_day_19790101-20161231.nc',
-#             'tas_AFR-22_ECMWF-ERAINT_evaluation_r1i1p1_GERICS-REMO2015_v1_day_19790102-20171231.nc')
-# 
-# fs_hist <- c('tas_AFR-22_MOHC-HadGEM2-ES_historical_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_day_19500101-20051230.nc', 
-#             'tas_AFR-22_MPI-M-MPI-ESM-LR_historical_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_day_19500101-20051231.nc',
-#             'tas_AFR-22_NCC-NorESM1-M_historical_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_day_19500101-20051231.nc',
-#             'tas_AFR-22_MOHC-HadGEM2-ES_historical_r1i1p1_GERICS-REMO2015_v1_day_19700101-20051230.nc' )
-# 
-# fs_rcp26 <- c('tas_AFR-22_MOHC-HadGEM2-ES_rcp26_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_day_20060101-20981230.nc',
-#              'tas_AFR-22_MOHC-HadGEM2-ES_rcp26_r1i1p1_GERICS-REMO2015_v1_day_20060101-20991230.nc',
-#              'tas_AFR-22_MPI-M-MPI-ESM-LR_rcp26_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_day_20060101-21001231.nc'
-#              )
-# 
-# fs_rcp85 <- c('tas_AFR-22_MOHC-HadGEM2-ES_rcp85_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_day_20060101-20991230.nc')
-# 
+# get the values (observation, historical reference run and corresponding Model realisation.)
 
 
 fs_obs <- c('pr_AFR-22_ECMWF-ERAINT_evaluation_r1i1p1_CLMcom-KIT-CCLM5-0-15_v1_day_19790101-20161231.nc',
@@ -74,10 +59,10 @@ nc_ref <- nc_open(f_ref)
 nc_mod <- nc_open(f_mod)
 
 # read in the values: 
-# get temperature
-pr_obs <- ncvar_get(nc_obs,'pr')
-pr_ref <- ncvar_get(nc_ref,'pr')
-pr_mod <- ncvar_get(nc_mod,'pr')
+# get precipitation
+pr_obs <- ncvar_get(nc_obs,'pr') * 86400 # transform form sec/m2/qm to mm/day
+pr_ref <- ncvar_get(nc_ref,'pr') * 86400
+pr_mod <- ncvar_get(nc_mod,'pr') * 86400
 
 # make the bias Adjustment 
 
@@ -89,11 +74,17 @@ plot.default(pr_modAj[1,1,])
 image(pr_mod[,,1] - pr_modAj[,,1],  col=rev(brewer.pal(11,"RdBu")))
 
 ts_obs <- apply(pr_obs, 3, mean)
-ts_ref <- apply(pr_ref, 3, mean)
-ts_modadj <- apply(pr_modAj, 3, mean)
-plot(seq(length(ts_obs)), ts_obs,type="l")
-lines(seq(length(ts_ref)), ts_ref, col="red", lwd=1)
-lines(seq(length(ts_modadj)), ts_modadj, col="blue", lwd=1)
+ts_mod <- apply(pr_mod, 3, mean)
+ts_modaj <- apply(pr_modAj, 3, mean)
+
+
+tsrm_obs <- rollmean(ts_obs, 3650,  align = c("center")) 
+tsrm_mod <- rollmean(ts_mod, 3650,  align = c("center")) 
+tsrm_modaj <- rollmean(ts_modaj, 3650,  align = c("center"))
+
+plot(seq(length(tsrm_obs)), tsrm_obs ,type="l", ylim=c(0,10))
+lines(seq(length(tsrm_mod)), tsrm_mod, col="red", lwd=1)
+lines(seq(length(tsrm_modaj)), tsrm_modaj, col="blue", lwd=2)
 
 # create Adjust output file and store the values there 
 
